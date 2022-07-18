@@ -26,4 +26,4 @@ inputdec(var title, var icn) => new InputDecoration(
     isDense: true,
     labelText: "$title");
 
-inputstyle() => TextStyle(color: Colors.black, fontFamily: 'SFUIDisplay');
+inputstyle() => const TextStyle(color: Colors.black, fontFamily: 'SFUIDisplay');

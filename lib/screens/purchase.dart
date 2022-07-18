@@ -1,8 +1,11 @@
+import 'dart:math';
+
 import 'package:autocomplete_textfield/autocomplete_textfield.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:flutter_application_1/main.dart';
+import 'package:flutter_application_1/model/item_model.dart';
 import 'package:flutter_application_1/styles.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
@@ -16,7 +19,8 @@ class PurchaseSreeen extends StatefulWidget {
 class _PurchaseScreenState extends State<PurchaseSreeen> {
   final List<ItemsModel> listItem = [];
   final TextEditingController _itemname = TextEditingController();
-  final TextEditingController _itemPrice = TextEditingController();
+  final TextEditingController _purchasePrice = TextEditingController();
+  final TextEditingController _salesPrice = TextEditingController();
   final TextEditingController _description = TextEditingController();
   final TextEditingController _qty = TextEditingController();
   CollectionReference itms = FirebaseFirestore.instance.collection("users");
@@ -70,9 +74,18 @@ class _PurchaseScreenState extends State<PurchaseSreeen> {
               TextField(
                   keyboardType: TextInputType.numberWithOptions(
                       signed: true, decimal: false),
-                  controller: _itemPrice,
+                  controller: _purchasePrice,
                   style: inputstyle(),
-                  decoration: inputdec("Item Price *", Icons.price_change)),
+                  decoration: inputdec("Purchase Price *", Icons.price_change)),
+              SizedBox(
+                height: 20,
+              ),
+              TextField(
+                  keyboardType: TextInputType.numberWithOptions(
+                      signed: true, decimal: false),
+                  controller: _salesPrice,
+                  style: inputstyle(),
+                  decoration: inputdec("Sales Price *", Icons.price_change)),
               SizedBox(
                 height: 20,
               ),
@@ -122,35 +135,22 @@ class _PurchaseScreenState extends State<PurchaseSreeen> {
       showToast("Invalid qty");
       return;
     }
-    if (_itemPrice.text.isEmpty) {
-      showToast("Invalid price");
+    if (_purchasePrice.text.isEmpty) {
+      showToast("Invalid Purchase price");
+      return;
+    }
+    if (_salesPrice.text.isEmpty) {
+      showToast("Invalid Sales price");
       return;
     }
 
     try {
-      itms
-          .doc(uid)
-          .collection("Purchase")
-          .where("Name", isEqualTo: selectedItem!.name)
-          .get()
-          .then((value) {
-        if (value.docs.isEmpty) {
-          itms.doc(uid).collection("Purchase").doc().set({
-            'Name': selectedItem?.name ?? "",
-            'Description': selectedItem?.description ?? "",
-            "qty": int.parse(_qty.text),
-            "price": _itemPrice.text
-          });
-          Navigator.pop(context);
-        } else {
-          itms.doc(uid).collection("Purchase").doc(value.docs[0].id).update({
-            'Name': selectedItem?.name ?? "",
-            'Description': selectedItem?.description ?? "",
-            "qty": value.docs[0]["qty"] + int.parse(_qty.text),
-            "price": _itemPrice.text
-          });
-        }
+      itms.doc(uid).collection("items").doc(selectedItem!.docId).update({
+        "qty": int.parse(_qty.text) + selectedItem!.qty,
+        "purchase_price": int.parse(_purchasePrice.text),
+        "sales_price": int.parse(_purchasePrice.text)
       });
+      Navigator.pop(context);
     } catch (e) {
       print(e);
     }
@@ -158,30 +158,28 @@ class _PurchaseScreenState extends State<PurchaseSreeen> {
 
   getItems() {
     listItem.clear();
-    var x = itms.doc(uid).collection("Items").get().then((value) {
-      value.docs.forEach((element) {
+    var x = itms.doc(uid).collection("items").get().then((value) {
+      for (var element in value.docs) {
         ItemsModel itemsModel = ItemsModel();
-        itemsModel.name = element.data()["Name"];
-        itemsModel.description = element.data()["Description"];
+        itemsModel.name = element.data()["name"];
+        itemsModel.description = element.data()["description"];
+        itemsModel.purchasePrice = element.data()['purchase_price'];
+        itemsModel.qty = element.data()['qty'];
+        itemsModel.docId = element.id;
         listItem.add(itemsModel);
-      });
+      }
       setState(() {});
     });
   }
-
-  showToast(text) {
-    Fluttertoast.showToast(
-        msg: text,
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.CENTER,
-        timeInSecForIosWeb: 1,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-        fontSize: 16.0);
-  }
 }
 
-class ItemsModel {
-  String name = "";
-  String description = "";
+showToast(text) {
+  Fluttertoast.showToast(
+      msg: text,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.CENTER,
+      timeInSecForIosWeb: 1,
+      backgroundColor: Colors.red,
+      textColor: Colors.white,
+      fontSize: 16.0);
 }
